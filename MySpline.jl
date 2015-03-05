@@ -47,6 +47,8 @@ basisB(gridx, d, x) = !(gridx[d] < x <= gridx[d+1]) ? zero(x) : 1 - basisA(gridx
 basisAd(gridx, d, x) = !(gridx[d] < x <= gridx[d+1]) ? zero(x) : - 1 / (gridx[d+1] - gridx[d])
 basisBd(gridx, d, x) = !(gridx[d] < x <= gridx[d+1]) ? zero(x) : - basisAd(gridx, d, x)
 
+gridindex(x, grid) = sum(grid .< x)
+
 function choosebasis(basisOne::Function, basisTwo::Function, gridx, d::Integer, x::Real)
     # the combination of basisOne and basisTwo stretches over two grid cells
     # this function chooses the right one to match them up:
