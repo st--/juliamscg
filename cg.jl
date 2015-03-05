@@ -78,7 +78,7 @@ function cgderiv(cg::CGDist, rs)
 end
 
 function cgderiv(cg::CGDist, cfg::Configuration, t::Integer)
-    deriv = zeros(size(cfg.pos))
+    deriv = zeros(size(cfg.pos)[2:end])
     rij = wrapdiff(cfg, t, cg.i, cg.j)
     n = rij / vecnorm(rij)
     deriv[cg.i,:] = -n

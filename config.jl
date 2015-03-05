@@ -1,4 +1,4 @@
-export Configuration
+export Configuration, wrapvec, wrapdiff
 
 immutable Configuration
     types::Vector{Symbol}
