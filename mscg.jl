@@ -1,17 +1,6 @@
-
-function calc_forces(configs, pot)
-    nt, Ncg, dim = size(configs)
-    @assert dim==3
-    
-    forces = zeros(configs)
-    for t=1:nt, i=1:Ncg, j=i+1:Ncg
-        f = feval(pot, vec(configs[t,i,:]), vec(configs[t,j,:]))
-        f = reshape(f, (1,1,dim))
-        forces[t,i,:] += f
-        forces[t,j,:] -= f
-    end
-    forces
-end
+export Configuration,
+    make_many_mscgmat, make_mscg_matrix, my_mscg_matrix,
+    solve_blockavg
 
 
 immutable Configuration
@@ -40,21 +29,11 @@ function make_many_mscgmat{I<:CGInteraction}(cgints::Array{I}, cfg::Configuratio
         
         for t=1:Nt
             rs = slice(cfg.pos, t,:,:) # Nx3 matrix of CG positions in this configuration
-            cgvalues = Float[cgvalue(cg, rs) for cg in cgvars]
-            fmat = @time splinefitmatrix(cgint.spl, cgvalues)
-
-            #@time cgderivs = Float[cgderiv(cg, rs, k, d) for k=1:Ncg, d=1:dim, cg in cgvars]
-            #cgderivs = zeros(Ncg, dim, Ncgvars)
-            #for (icg, cg) in enumerate(cgvars), k=involvedin(cg), d=1:dim
-            #    cgderivs[k, :, icg] = cgderiv(cg, rs, k)
-            #end
-            @time cgderivs = reshape(hcat([cgderiv(cg, rs) for cg in cgvars]...), (Ncg*dim, Ncgvars))
             
-            #for k=1:Ncg, d=1:dim
-            #    Idx = sub2ind((Nt, Ncg, dim), t, k, d)
-            #    cgderivs = Float[cgderiv(cg,rs, k,d) for cg in cgvars]
-            #    G[Idx, iD:iD+NDi-1] = cgderivs' * fmat
-            #end
+            cgvalues = Float[cgvalue(cg, rs) for cg in cgvars]
+            cgderivs = reshape(hcat([cgderiv(cg, rs) for cg in cgvars]...), (Ncg*dim, Ncgvars))
+            fmat = splinefitmatrix(cgint.spl, cgvalues)
+            
             G[t, :, iD:iD+NDi-1] = cgderivs * fmat
         end
         
@@ -90,6 +69,7 @@ function make_mscg_matrix(configs, interactions)
     end
     G
 end
+
 
 function do_mat_coeff1(rs, grid)
     Ncg = size(rs,1)
@@ -131,7 +111,7 @@ function my_mscg_matrix(configs, grid)
     Ngrid = length(grid)
     G = zeros(Nt*Ncg*dim, Ngrid*2)
     for t=1:Nt
-        G[t:Nt:end, :] = @time do_mat_coeff1(reshape(configs[t,:,:], (Ncg,dim)), grid)
+        G[t:Nt:end, :] = do_mat_coeff1(reshape(configs[t,:,:], (Ncg,dim)), grid)
     end
     G
 end
@@ -152,6 +132,6 @@ function solve_blockavg(configs, forces, spl::CubicSpline, blocksize; use_normal
         ϕacc += ϕ
         ϕw += (ϕ .!= 0)
     end
-    (@show ϕacc) ./ (@show ϕw)
+    ϕacc ./ ϕw
 end
 

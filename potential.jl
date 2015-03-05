@@ -38,3 +38,17 @@ ueval{N<:Number}(p::PairPotential, x1::Vector{N}, x2::Vector{N}) = eval(p, vecno
 feval{N<:Number}(p::PairPotential, x1::Vector{N}, x2::Vector{N}) = feval(p, vecnorm(x1 - x2)) * normalised(x1 - x2)
 
 
+function calc_forces(configs, pot)
+    nt, Ncg, dim = size(configs)
+    @assert dim==3
+    
+    forces = zeros(configs)
+    for t=1:nt, i=1:Ncg, j=i+1:Ncg
+        f = feval(pot, vec(configs[t,i,:]), vec(configs[t,j,:]))
+        f = reshape(f, (1,1,dim))
+        forces[t,i,:] += f
+        forces[t,j,:] -= f
+    end
+    forces
+end
+

@@ -1,3 +1,12 @@
+import Base.length
+export CGVariable,
+    CGInteraction, CGPairInteraction,
+    CGPairSpline,
+    numcoeff, getcgvars,
+    CGDist,
+    involvedin, cgvalue, cgderiv,
+
+
 abstract CGVariable
 
 
@@ -67,11 +76,3 @@ function cgderiv(cg::CGDist, rs)
     deriv
 end
 
-
-abstract CGInteraction
-immutable CGSpline <: CGInteraction
-    spline::CubicSpline
-end
-
-
-#isinvolved(cg::CGDist, k) = cg.i==k || cg.j==k
