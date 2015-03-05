@@ -44,6 +44,7 @@ end
 involvedin(cg::CGDist) = [cg.i,cg.j]
 
 cgvalue(cg::CGDist, rs) = vecnorm(rs[cg.i,:] - rs[cg.j,:])
+cgvalue(cg::CGDist, cfg::Configuration, t::Integer) = vecnorm(wrapdiff(cfg, t, cg.i, cg.j))
 # sqrt((r_i,x - r_j,x)^2 + ...)
 # d/dr_k,d = \)
 
@@ -76,3 +77,11 @@ function cgderiv(cg::CGDist, rs)
     deriv
 end
 
+function cgderiv(cg::CGDist, cfg::Configuration, t::Integer)
+    deriv = zeros(size(cfg.pos))
+    rij = wrapdiff(cfg, t, cg.i, cg.j)
+    n = rij / vecnorm(rij)
+    deriv[cg.i,:] = -n
+    deriv[cg.j,:] = n
+    deriv
+end

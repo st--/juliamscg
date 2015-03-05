@@ -1,13 +1,5 @@
-export Configuration,
-    make_many_mscgmat, make_mscg_matrix, my_mscg_matrix,
+export make_many_mscgmat, make_mscg_matrix, my_mscg_matrix,
     solve_blockavg
-
-
-immutable Configuration
-    types::Vector{Symbol}
-    pos
-    forces
-end
 
 
 function make_many_mscgmat{I<:CGInteraction}(cgints::Array{I}, cfg::Configuration)
@@ -28,10 +20,10 @@ function make_many_mscgmat{I<:CGInteraction}(cgints::Array{I}, cfg::Configuratio
         Ncgvars = length(cgvars)
         
         for t=1:Nt
-            rs = slice(cfg.pos, t,:,:) # Nx3 matrix of CG positions in this configuration
+            #rs = slice(cfg.pos, t,:,:) # Nx3 matrix of CG positions in this configuration
             
-            cgvalues = Float[cgvalue(cg, rs) for cg in cgvars]
-            cgderivs = reshape(hcat([cgderiv(cg, rs) for cg in cgvars]...), (Ncg*dim, Ncgvars))
+            cgvalues = Float[cgvalue(cg, cfg, t) for cg in cgvars]
+            cgderivs = reshape(hcat([cgderiv(cg, cfg, t) for cg in cgvars]...), (Ncg*dim, Ncgvars))
             fmat = splinefitmatrix(cgint.spl, cgvalues)
             
             G[t, :, iD:iD+NDi-1] = cgderivs * fmat
