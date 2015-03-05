@@ -47,7 +47,14 @@ basisB(gridx, d, x) = !(gridx[d] < x <= gridx[d+1]) ? zero(x) : 1 - basisA(gridx
 basisAd(gridx, d, x) = !(gridx[d] < x <= gridx[d+1]) ? zero(x) : - 1 / (gridx[d+1] - gridx[d])
 basisBd(gridx, d, x) = !(gridx[d] < x <= gridx[d+1]) ? zero(x) : - basisAd(gridx, d, x)
 
-gridindex(x, grid) = sum(grid .< x)
+function gridindex(x, grid)
+    N = length(grid)
+    k = 1
+    while k <= N && grid[k] < x
+        k += 1
+    end
+    k - 1
+end
 
 function choosebasis(basisOne::Function, basisTwo::Function, gridx, d::Integer, x::Real)
     # the combination of basisOne and basisTwo stretches over two grid cells
@@ -124,29 +131,23 @@ function splinefitrow!(Gr, s::Spline, x)
     end
 end
 
-function splinefitrow!(Gr, s::CubicSpline, x)
-    @assert length(Gr) == length(s)
+function splinefitrow!(G, i, s::CubicSpline, x)
     grid = s.gridx
     k = gridindex(x, grid)
     1 <= k < length(grid) || return
-    Gr[2k-1] = basisA(grid, k, x)
-    Gr[2k]   = basisC(grid, k, x)
-    Gr[2k+1] = basisB(grid, k, x)
-    Gr[2k+2] = basisD(grid, k, x)
-    Gr
+    G[i, 2k-1] = basisA(grid, k, x)
+    G[i, 2k]   = basisC(grid, k, x)
+    G[i, 2k+1] = basisB(grid, k, x)
+    G[i, 2k+2] = basisD(grid, k, x)
+    G
 end
 
-function splinefitmatrix(s::Spline, dataxs; old=false)
+function splinefitmatrix(s::Spline, dataxs)
     Nd = length(s)
     Nt = length(dataxs)
     G = zeros(Nt, Nd)
-    if old
-        for d=1:Nd, i=1:Nt # this is inefficient - most calls will be zero!
-            G[i, d] = splinebasis(s, d, dataxs[i])
-        end
-    end
     for i=1:Nt
-        splinefitrow!(sub(G, i, :), s, dataxs[i])
+        splinefitrow!(G, i, s, dataxs[i])
     end
     G
 end

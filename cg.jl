@@ -4,7 +4,8 @@ export CGVariable,
     CGPairSpline,
     numcoeff, getcgvars,
     CGDist,
-    involvedin, cgvalue, cgderiv
+    involvedin, cgvalue, cgderiv,
+    cgcalc!
 
 
 abstract CGVariable
@@ -84,4 +85,13 @@ function cgderiv(cg::CGDist, cfg::Configuration, t::Integer)
     deriv[cg.i,:] = -n
     deriv[cg.j,:] = n
     deriv
+end
+
+function cgcalc!(vals, derivs, i,  cg::CGDist, cfg::Configuration, t::Integer)
+    rij = wrapdiff(cfg, t, cg.i, cg.j)
+    rijnorm = vecnorm(rij)
+    vals[i] = rijnorm
+    n = rij / rijnorm
+    derivs[cg.i,:,i] = -n
+    derivs[cg.j,:,i] = n
 end
