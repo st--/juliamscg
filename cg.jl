@@ -4,7 +4,7 @@ export CGVariable,
     CGPairSpline,
     numcoeff, getcgvars,
     CGDist,
-    involvedin, cgvalue, cgderiv,
+    involvedin, cgvalue, cgderiv
 
 
 abstract CGVariable
