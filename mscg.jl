@@ -18,13 +18,12 @@ function make_many_mscgmat{I<:CGInteraction}(cgints::Array{I}, cfg::Configuratio
         
         cgvars = getcgvars(cgint, cfg.types)
         Ncgvars = length(cgvars)
-        iter_cgvars = enumerate(cgvars)
         
         for t=1:Nt
             cgvalues = zeros(Ncgvars)
             derivs = zeros(Ncg, dim, Ncgvars)
-            for (i, cg) in iter_cgvars
-                cgcalc!(cgvalues, derivs, i,  cg, cfg, t)
+            i=1; for cg in cgvars
+                cgcalc!(cgvalues, derivs, i,  cg, cfg, t); i += 1
             end
             cgderivs = reshape(derivs, (Ncg*dim, Ncgvars))
             fmat = splinefitmatrix(cgint.spl, cgvalues)
