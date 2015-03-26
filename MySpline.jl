@@ -146,7 +146,7 @@ function splinefitmatrix(s::Spline, dataxs)
     Nd = length(s)
     Nt = length(dataxs)
     G = zeros(Nt, Nd)
-    for i=1:Nt
+    @inbounds for i=1:Nt
         splinefitrow!(G, i, s, dataxs[i])
     end
     G
