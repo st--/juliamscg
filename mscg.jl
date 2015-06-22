@@ -1,7 +1,3 @@
-export make_many_mscgmat, make_mscg_matrix, my_mscg_matrix,
-    solve_blockavg
-
-
 function make_many_mscgmat{I<:CGInteraction}(cgints::Array{I}, cfg::Configuration)
     Nt, Ncg, dim = size(cfg.pos)
     @assert dim == 3

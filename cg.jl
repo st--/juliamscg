@@ -1,15 +1,4 @@
-import Base.length
-export CGVariable,
-    CGInteraction, CGPairInteraction,
-    CGPairSpline,
-    numcoeff, getcgvars,
-    CGDist,
-    involvedin, cgvalue, cgderiv,
-    cgcalc!
-
-
 abstract CGVariable
-
 
 abstract CGInteraction
 
