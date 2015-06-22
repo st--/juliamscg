@@ -36,6 +36,36 @@ function make_many_mscgmat{I<:CGInteraction}(cgints::Array{I}, cfg::Configuratio
     reshape(G, (Nt*Ncg*dim, ND))
 end
 
+export add_constraint, mscgcoeff, mscgcalcspline
+
+numconstraints(cgint::CGPairSpline) = length(cgint.spl.gridx) - 2
+
+function add_constraint{I<:CGInteraction}(cgints::Array{I})
+    Mrow = mapreduce(numconstraints, (+), cgints)
+    Mcol = mapreduce(length, (+), cgints) # = size(mohG, 2)
+    conG = zeros(Mrow, Mcol)
+    conb = zeros(Mrow)
+    irow = icol = 1
+    for cgint in cgints
+        ncols = length(cgint)
+        nrows = numconstraints(cgint)
+        conG[irow:irow+nrows-1, icol:icol+ncols-1] = constraint_firstderiv(cgint.spl)[1]
+        irow += nrows
+        icol += ncols
+    end
+    conG, conb
+end
+
+function mscgcoeff{I<:CGInteraction}(cgints::Array{I}, phis, i)
+    ncoeffs = map(length, cgints)
+    start = sum(ncoeffs[1:i-1]) + 1
+    stop = start + ncoeffs[i] - 1
+    phis[start:stop]
+end
+
+function mscgcalcspline{I<:CGInteraction}(cgints::Array{I}, phis, i, xs)
+    [splineeval(cgints[i].spl, mscgcoeff(cgints, phis, i), x) for x=xs]
+end
 
 function make_mscg_matrix(configs, interactions)
     nt, Ncg, dim = size(configs)
