@@ -229,7 +229,6 @@ end
 function splinefitmatrix!(G::Matrix, s::Spline, dataxs)
     (Nt = length(dataxs)) == size(G,1) || throw(DimensionMismatch("size(G,1) != length(dataxs)"))
     length(s) == size(G,2) || throw(DimensionMismatch("size(G,2) != length(s)"))
-    G = zeros(Nt, Nd)
     @inbounds for i=1:Nt
         splinefitrow!(G, i, s, dataxs[i])
     end
