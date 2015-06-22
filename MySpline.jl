@@ -187,6 +187,34 @@ function splinefitrow!(Gr, s::Spline, x)
     end
 end
 
+function splinefitrow!(G, i, s::LinearSpline, x)
+    grid = s.gridx
+    k = gridindex(x, grid)
+    1 <= k < length(grid) || return
+    G[i, k] = basisA(grid, k, x)
+    G[i, k+1] = basisB(grid, k, x)
+    G
+end
+
+"""
+function splinefitrow!(G, i, s::DeltaSpline, x)
+    grid = s.gridx
+    k = gridindex(x, grid)
+    if d == 1
+        gridx[1] - (gridx[2]-gridx[1])/2 < x <= (gridx[d] + gridx[d+1])/2 ? one(x) : zero(x)
+    elseif d == length(gridx)
+        (gridx[end-1] + gridx[end])/2 < x <= gridx[end] + (gridx[end]-gridx[end-1])/2 ? one(x) : zero(x)
+    else
+        (gridx[d-1] + gridx[d])/2 < x <= (gridx[d] + gridx[d+1])/2 ? one(x) : zero(x)
+    end
+    
+    1 <= k < length(grid) || return
+    G[i, k] = basisA(grid, k, x)
+    G[i, k+1] = basisB(grid, k, x)
+    G
+end
+"""
+
 function splinefitrow!(G, i, s::CubicSpline, x)
     grid = s.gridx
     k = gridindex(x, grid)
