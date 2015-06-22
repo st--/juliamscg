@@ -1,32 +1,38 @@
 function make_many_mscgmat{I<:CGInteraction}(cgints::Array{I}, cfg::Configuration)
     Nt, Ncg, dim = size(cfg.pos)
     @assert dim == 3
-    
+
     ND = numcoeff(cgints)
-    
+
     G = zeros(Nt, Ncg*dim, ND)
     Float = eltype(G)
-    
+
     # different interactions may have different numbers of coefficients
     iD = 1 # starting index of current interaction's set of coefficients
     for cgint in cgints
         NDi = length(cgint) # current interaction's number of coefficients
-        
+
         cgvars = getcgvars(cgint, cfg.types)
         Ncgvars = length(cgvars)
-        
+
+        cgvalues = Array(Float, Ncgvars)
+        derivs = Array(Float, Ncg, dim, Ncgvars)
+        fmat = Array(Float, Ncgvars, NDi)
+        Gsub = Array(Float, Ncg*dim, NDi)
         for t=1:Nt
-            cgvalues = zeros(Ncgvars)
-            derivs = zeros(Ncg, dim, Ncgvars)
-            i=1; for cg in cgvars
+            fill!(cgvalues, 0) # not needed?
+            fill!(derivs, 0)
+            fill!(fmat, 0)
+            fill!(Gsub, 0)
+            i=1; for cg in cgvars # much less overhead than enumerate()
                 cgcalc!(cgvalues, derivs, i,  cg, cfg, t); i += 1
             end
-            cgderivs = reshape(derivs, (Ncg*dim, Ncgvars))
-            fmat = splinefitmatrix(cgint.spl, cgvalues)
-            
-            G[t, :, iD:iD+NDi-1] = cgderivs * fmat
+            cgderivs = reshape(derivs, (Ncg*dim, Ncgvars))#XXX
+            splinefitmatrix!(fmat, cgint.spl, cgvalues)
+
+            G[t, :, iD:iD+NDi-1] = BLAS.gemm!('N', 'N', one(Float), cgderivs, fmat, one(Float), Gsub)
         end
-        
+
         iD += NDi
     end
     reshape(G, (Nt*Ncg*dim, ND))
