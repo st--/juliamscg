@@ -6,9 +6,10 @@ export
     Spline,
     DeltaSpline, LinearSpline, CubicSpline,
     basisA, basisB, basisC, basisD,
+    basisAint, basisBint, basisCint, basisDint,
     basisAd, basisBd, basisCd, basisDd,
-    splinebasis, splinebasisderiv,
-    splineeval,
+    splinebasis, splinebasisint, splinebasisderiv,
+    splineeval, splineevalint,
     splinefitmatrix,
     constraint_firstderiv,
     solvecoeffmat,
@@ -44,6 +45,9 @@ end
 basisA(gridx, d, x) = !(gridx[d] < x <= gridx[d+1]) ? zero(x) : (gridx[d+1] - x) / (gridx[d+1] - gridx[d])
 basisB(gridx, d, x) = !(gridx[d] < x <= gridx[d+1]) ? zero(x) : 1 - basisA(gridx, d, x)
 
+basisAint(gridx, d, x) = - (gridx[d+1] - x)^2 / 2(gridx[d+1] - gridx[d])
+basisBint(gridx, d, x) = + (x - gridx[d])^2 / 2(gridx[d+1] - gridx[d])
+
 basisAd(gridx, d, x) = !(gridx[d] < x <= gridx[d+1]) ? zero(x) : - 1 / (gridx[d+1] - gridx[d])
 basisBd(gridx, d, x) = !(gridx[d] < x <= gridx[d+1]) ? zero(x) : - basisAd(gridx, d, x)
 
@@ -58,7 +62,7 @@ end
 
 function choosebasis(basisOne::Function, basisTwo::Function, gridx, d::Integer, x::Real)
     # the combination of basisOne and basisTwo stretches over two grid cells
-    # this function chooses the right one to match them up:
+    # this function chooses the correct one to match them up:
     # basisTwo from the previous grid point, or basisOne from the current grid point
     if x <= gridx[1] || x > gridx[end]
         return zero(x)
@@ -76,6 +80,9 @@ end
 splinebasis(s::LinearSpline, d::Integer, x::Real) = (
     choosebasis(basisA, basisB, s.gridx, d, x)
 )
+splinebasisint(s::LinearSpline, d::Integer, x::Real) = (
+    choosebasis(basisAint, basisBint, s.gridx, d, x)
+)
 splinebasisderiv(s::LinearSpline, d::Integer, x::Real) = (
     choosebasis(basisAd, basisBd, s.gridx, d, x)
 )
@@ -85,6 +92,11 @@ basisC(gridx, d, x) = (local A = basisA(gridx, d, x);
     1/6 * (A^3 - A)*(gridx[d+1]-gridx[d])^2)
 basisD(gridx, d, x) = (local B = basisB(gridx, d, x);
     1/6 * (B^3 - B)*(gridx[d+1]-gridx[d])^2)
+
+basisCint(gridx, d, x) = (local Ai = basisAint(gridx, d, x);
+    1/6 * (-Ai^2 - Ai*(gridx[d+1]-gridx[d])) * (gridx[d+1]-gridx[d]))
+basisDint(gridx, d, x) = (local Bi = basisBint(gridx, d, x);
+    1/6 * (+Bi^2 - Bi*(gridx[d+1]-gridx[d])) * (gridx[d+1]-gridx[d]))
 
 basisCd(gridx, d, x) = (local A = basisA(gridx, d, x); local Ad = basisAd(gridx, d, x);
     1/6 * (3A^2 - 1) * Ad * (gridx[d+1]-gridx[d])^2)
@@ -105,6 +117,9 @@ end
 splinebasis(s::CubicSpline, d2::Integer, x::Real) = (
     choosesplitbasis([basisA basisB; basisC basisD], s.gridx, d2, x)
 )
+splinebasisint(s::CubicSpline, d2::Integer, x::Real) = (
+    choosesplitbasis([basisAint basisBint; basisCint basisDint], s.gridx, d2, x)
+)
 splinebasisderiv(s::CubicSpline, d2::Integer, x::Real) = (
     choosesplitbasis([basisAd basisBd; basisCd basisDd], s.gridx, d2, x)
 )
@@ -117,6 +132,47 @@ splinebasisderiv(s::CubicSpline, d2::Integer, x::Real) = (
 
 splineeval(s::Spline, ϕs, x) = dot(ϕs, [splinebasis(s, d, x) for d=1:length(s)])
 # the value of the spline fit at position x, given a spline with grid s and coefficients ϕs
+# this is inefficient, as most basis functions / coefficients are actually irrelevant!...
+
+# d2 set d   i=1     i=2     i=3
+#          [g1:g2] [g2:g3] [g3:g4]
+# 1  A/B 1    A
+# 2  C/D 1    C
+# 3  A/B 2    B       A
+# 4  C/D 2    D       C
+# 5  A/B 3            B       A
+# 6  C/D 3            D       C
+# 7  A/B 4                    B
+# 8  C/D 4                    D
+
+# x between gridx[i], gridx[i+1]:
+# A <- phi[2i-1]
+# C <- phi[2i]
+# B <- phi[2i+1]
+# D <- phi[2i+2]
+
+function splineevalint(s::CubicSpline, phi, xs)
+    # integrate from right, starting at zero
+    ys = zeros(xs)
+
+    runningintval = 0.0 # value of integral at right edge of block
+    # start with right-most grid interval
+    for i = [length(s.gridx)-1 : -1 : 1]
+        a, b = s.gridx[i], s.gridx[i+1]
+        intval(x) = (phi[2i-1] * basisAint(s.gridx, i, x)
+            + phi[2i] * basisCint(s.gridx, i, x)
+            + phi[2i+1] * basisBint(s.gridx, i, x)
+            + phi[2i+2] * basisDint(s.gridx, i, x))
+        valright = intval(b)
+
+        in_block = a .< xs .<= b
+        ys[in_block] = [runningintval - (valright - intval(x))
+            for x in xs[in_block]]
+
+        runningintval = runningintval - (valright - intval(a))
+    end
+    ys
+end
 
 probabled(s::DeltaSpline, idx) = [idx-1, idx]
 probabled(s::LinearSpline, idx) = [idx-1, idx]
