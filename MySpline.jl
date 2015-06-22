@@ -10,7 +10,7 @@ export
     basisAd, basisBd, basisCd, basisDd,
     splinebasis, splinebasisint, splinebasisderiv,
     splineeval, splineevalint,
-    splinefitmatrix,
+    splinefitmatrix!, splinefitmatrix,
     constraint_firstderiv,
     solvecoeffmat,
     findsplinecoeff
@@ -226,14 +226,20 @@ function splinefitrow!(G, i, s::CubicSpline, x)
     G
 end
 
-function splinefitmatrix(s::Spline, dataxs)
-    Nd = length(s)
-    Nt = length(dataxs)
+function splinefitmatrix!(G::Matrix, s::Spline, dataxs)
+    (Nt = length(dataxs)) == size(G,1) || throw(DimensionMismatch("size(G,1) != length(dataxs)"))
+    length(s) == size(G,2) || throw(DimensionMismatch("size(G,2) != length(s)"))
     G = zeros(Nt, Nd)
     @inbounds for i=1:Nt
         splinefitrow!(G, i, s, dataxs[i])
     end
     G
+end
+function splinefitmatrix(s::Spline, dataxs)
+    Nt = length(dataxs)
+    Nd = length(s)
+    G = zeros(Nt, Nd)
+    splinefitmatrix!(G, s, dataxs)
 end
 
 function constraint_firstderiv(s::CubicSpline)
