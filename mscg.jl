@@ -19,18 +19,23 @@ function make_many_mscgmat{I<:CGInteraction}(cgints::Array{I}, cfg::Configuratio
         derivs = Array(Float, Ncg, dim, Ncgvars)
         fmat = Array(Float, Ncgvars, NDi)
         Gsub = Array(Float, Ncg*dim, NDi)
-        for t=1:Nt
+
+        rij = Array(Float, dim)
+
+        @inbounds for t=1:Nt
             fill!(cgvalues, 0) # not needed?
             fill!(derivs, 0)
             fill!(fmat, 0)
             fill!(Gsub, 0)
-            i=1; for cg in cgvars # much less overhead than enumerate()
-                cgcalc!(cgvalues, derivs, i,  cg, cfg, t); i += 1
+
+            @inbounds for i=1:Ncgvars # much less overhead than enumerate()
+                cgcalc!!(rij, cgvalues, derivs, i,  cgvars[i], cfg, t)
             end
             cgderivs = reshape(derivs, (Ncg*dim, Ncgvars))#XXX
             splinefitmatrix!(fmat, cgint.spl, cgvalues)
 
-            G[t, :, iD:iD+NDi-1] = BLAS.gemm!('N', 'N', one(Float), cgderivs, fmat, one(Float), Gsub)
+            BLAS.gemm!('N', 'N', one(Float), cgderivs, fmat, one(Float), Gsub)
+            G[t, :, iD:iD+NDi-1] = Gsub
         end
 
         iD += NDi

@@ -84,3 +84,22 @@ function cgcalc!(vals, derivs, i,  cg::CGDist, cfg::Configuration, t::Integer)
     derivs[cg.i,:,i] = -n
     derivs[cg.j,:,i] = n
 end
+
+function myvecnorm(x::Array)
+    sum = zero(eltype(x))
+    for v in x
+        sum += v*v
+    end
+    sqrt(sum)
+end
+
+function cgcalc!!(rij::Vector, vals::Vector, derivs::Array, i::Integer,  cg::CGDist, cfg::Configuration, t::Integer)
+    wrapdiff!!(rij, cfg, t, cg.i, cg.j)
+    rijnorm = myvecnorm(rij)
+    vals[i] = rijnorm
+    @inbounds for d=1:3
+        n = rij[d] / rijnorm
+        derivs[cg.i, d, i] = -n
+        derivs[cg.j, d, i] = n
+    end
+end
