@@ -1,6 +1,3 @@
-# Copyright (c) 2013-2015 S.T. John
-# python-only extended XYZ reader
-
 import numpy as np
 import itertools
 from collections import OrderedDict
@@ -266,4 +263,77 @@ def load(xyz, **kwargs):
         else:
             xyz = open(xyz, 'r')
     return XYZ(xyz, **kwargs)
+
+FRAMESIZE, HEADER, ATOMLINE = range(3)
+
+def readxyzpos(f):
+    nextlinetype = FRAMESIZE
+    framesize = None
+    headers = []
+    allpos = []
+    frame = []
+    i = 0
+    while True:
+        line = f.readline()
+        if not line: break
+        if nextlinetype == FRAMESIZE:
+            i += 1
+            #if i % 1000 == 0:
+            #    print i
+            if frame:
+                allpos.append(frame)
+                frame = []
+            framesize = int(line.strip())
+            nextlinetype = HEADER
+        elif nextlinetype == HEADER:
+            headers.append(line.strip())
+            nextlinetype = ATOMLINE
+        elif nextlinetype == ATOMLINE:
+            fields = line.split()
+            frame.append(map(float, fields[1:4]))
+            if len(frame) == framesize:
+                nextlinetype = FRAMESIZE
+    if frame:
+        allpos.append(frame)
+    return np.array(allpos), headers
+
+def fastloadpos(xyz, returnheaders=False):
+    if isinstance(xyz, str):
+        if '\n' in xyz and xyz[:xyz.index('\n')].isdigit():
+            xyz = iter(xyz.split('\n'))
+        else:
+            xyz = open(xyz, 'r')
+    if returnheaders:
+        return readxyzpos(xyz)
+    else:
+        return readxyzpos(xyz)[0]
+
+def fastloadheader(xyz):
+    if isinstance(xyz, str):
+        if '\n' in xyz and xyz[:xyz.index('\n')].isdigit():
+            xyz = iter(xyz.split('\n'))
+        else:
+            xyz = open(xyz, 'r')
+
+    allheaders = []
+    while True:
+        numberline = xyz.readline()
+        if not numberline: break
+
+        framesize = int(numberline.strip())
+        header = xyz.readline().strip()
+        allheaders.append(header)
+
+        for i in range(framesize): xyz.readline() # skip atoms
+
+    return allheaders
+
+def getfield(headers, field, parser=lambda x:x):
+    values = []
+    fieldeq = field + '='
+    labellen = len(fieldeq)
+    for h in headers:
+        val = [parser(f[labellen:]) for f in h.split() if f.startswith(fieldeq)]
+        values.append(val)
+    return values
 
