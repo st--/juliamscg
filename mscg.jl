@@ -12,7 +12,7 @@ function make_many_mscgmat{I<:CGInteraction}(cgints::Array{I}, cfg::Configuratio
     for cgint in cgints
         NDi = length(cgint) # current interaction's number of coefficients
 
-        cgvars = getcgvars(cgint, cfg.types)
+        cgvars = filter(allowed, getcgvars(cgint, cfg.types))
         Ncgvars = length(cgvars)
 
         cgvalues = Array(Float, Ncgvars)

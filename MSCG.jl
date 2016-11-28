@@ -9,7 +9,7 @@ export
     CGInteraction, CGPairInteraction,
     CGPairSpline,
     numcoeff, getcgvars,
-    CGDist,
+    CGDist, CGAllDist, CGBondDist, CGNonbondedDist,
     involvedin, cgvalue, cgderiv,
     cgcalc!
 

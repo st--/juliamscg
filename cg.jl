@@ -26,10 +26,26 @@ function getcgvars(cg::CGPairInteraction, cgtypes::Vector{Symbol})
 end        
 
 
-immutable CGDist <: CGVariable
+abstract CGDist <: CGVariable
+immutable CGAllDist <: CGDist
     i::Integer
     j::Integer
 end
+immutable CGBondDist <: CGDist
+    i::Integer
+    j::Integer
+end
+immutable CGNonbondedDist <: CGDist
+    i::Integer
+    j::Integer
+end
+
+MOLSIZE = 3
+molindex(i::Integer) = div(i-1, MOLSIZE) + 1 #XXX not general
+
+allowed(cg::CGAllDist) = true
+allowed(cg::CGBondDist) = molindex(cg.i) == molindex(cg.j)
+allowed(cg::CGNonbondedDist) = molindex(cg.i) != molindex(cg.j)
 
 involvedin(cg::CGDist) = [cg.i,cg.j]
 
